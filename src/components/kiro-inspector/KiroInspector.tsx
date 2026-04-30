@@ -30,7 +30,14 @@ interface ElementInfo {
   sourceLine?: number
 }
 
-export default function KiroInspector() {
+export type EditorType = 'kiro' | 'vscode' | 'cursor' | 'webstorm'
+
+export interface KiroInspectorProps {
+  /** Which editor to open files in. Defaults to 'kiro'. */
+  editor?: EditorType
+}
+
+export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
   // Only render in development
   if (import.meta.env.PROD) return null
 
@@ -117,7 +124,16 @@ export default function KiroInspector() {
   const openInEditor = () => {
     if (!selectedElement?.sourceFile) return
     const line = selectedElement.sourceLine || 1
-    fetch(`/__open-in-editor?file=${encodeURIComponent(selectedElement.sourceFile)}&line=${line}&column=1`)
+    const file = selectedElement.sourceFile
+    
+    const editorUrls: Record<EditorType, string> = {
+      kiro: `kiro://file/${file}:${line}:1`,
+      vscode: `vscode://file/${file}:${line}:1`,
+      cursor: `cursor://file/${file}:${line}:1`,
+      webstorm: `webstorm://open?file=${file}&line=${line}`,
+    }
+    
+    window.open(editorUrls[editor], '_self')
   }
 
   const copyToClipboard = () => {
@@ -197,11 +213,11 @@ export default function KiroInspector() {
           </div>
 
           <div className="px-4 py-3 border-t bg-gray-50 space-y-2">
-            <button onClick={openInEditor} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">Open in Kiro IDE</button>
-            <button onClick={copyToClipboard} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded hover:bg-gray-300">
+            <button onClick={copyToClipboard} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               {copied ? 'Copied to clipboard!' : 'Copy prompt for Kiro'}
             </button>
+            <button onClick={openInEditor} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded hover:bg-gray-300">Open in {editor === 'vscode' ? 'VS Code' : editor === 'webstorm' ? 'WebStorm' : editor.charAt(0).toUpperCase() + editor.slice(1)}</button>
           </div>
         </div>
       )}

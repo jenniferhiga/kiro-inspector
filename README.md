@@ -2,7 +2,65 @@
 
 Select any UI element in your prototype, see its source file and line, describe a change, and copy a structured prompt for Kiro IDE.
 
-## Quick Start
+## Installation
+
+```bash
+npm install kiro-inspector
+```
+
+## Setup
+
+### 1. Add the Babel plugin to your Vite config
+
+```ts
+// vite.config.ts
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [
+    react({
+      babel: {
+        plugins: ['kiro-inspector/babel-plugin'],
+      },
+    }),
+  ],
+})
+```
+
+### 2. Add to your root component
+
+```tsx
+// App.tsx
+import { KiroInspector } from 'kiro-inspector'
+
+function App() {
+  return (
+    <>
+      {/* your app */}
+      <KiroInspector />
+    </>
+  )
+}
+```
+
+### 3. Choose your editor (optional)
+
+```tsx
+<KiroInspector editor="kiro" />    // default
+<KiroInspector editor="vscode" />
+<KiroInspector editor="cursor" />
+<KiroInspector editor="webstorm" />
+```
+
+## Peer Dependencies
+
+- `react` (>=18)
+- `lucide-react`
+- Tailwind CSS
+
+---
+
+## Manual Installation (without npm)
 
 ### 1. Copy files into your project
 
@@ -38,17 +96,11 @@ function App() {
   return (
     <>
       {/* your app */}
-      <KiroInspector projectRoot="/Users/you/your-project" />
+      <KiroInspector />
     </>
   )
 }
 ```
-
-### 4. Peer dependencies
-
-- `react` (>=18)
-- `lucide-react`
-- Tailwind CSS
 
 ---
 

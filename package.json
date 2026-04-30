@@ -1,0 +1,50 @@
+{
+  "name": "kiro-inspector",
+  "version": "1.0.0",
+  "description": "Select any UI element in your React prototype, see its source file and line, and copy a structured prompt for Kiro.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./babel-plugin": "./babel-plugin-source-attr.cjs"
+  },
+  "files": [
+    "dist",
+    "babel-plugin-source-attr.cjs"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --external react",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "lucide-react": ">=0.300.0",
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "react": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^8.0.10"
+  },
+  "keywords": [
+    "kiro",
+    "inspector",
+    "react",
+    "devtools",
+    "ui"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/appian/kiro-inspector"
+  },
+  "dependencies": {
+    "kiro-inspector": "^1.0.0"
+  }
+}
