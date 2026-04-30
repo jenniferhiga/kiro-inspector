@@ -1,6 +1,6 @@
 {
   "name": "kiro-inspector",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Select any UI element in your React prototype, see its source file and line, and copy a structured prompt for Kiro.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

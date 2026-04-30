@@ -12,7 +12,7 @@
  *   - process.env.EDITOR set in vite.config.ts (e.g. 'kiro', 'code', 'cursor')
  *   - Tailwind CSS (uses utility classes)
  *
- * Keyboard shortcut: ⌘+Shift+K to toggle select mode
+ * Keyboard shortcut: ⌘+Shift+I to toggle select mode
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -114,7 +114,7 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'K') { e.preventDefault(); setActive(a => !a); setSelectedElement(null) }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'I') { e.preventDefault(); setActive(a => !a); setSelectedElement(null) }
       if (e.key === 'Escape') { setActive(false); setSelectedElement(null) }
     }
     window.addEventListener('keydown', onKey)
@@ -154,7 +154,7 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
     <>
       <button data-kiro-select onClick={() => { setActive(!active); setSelectedElement(null) }}
         className={`fixed bottom-4 right-4 z-[9999] p-3 rounded-full shadow-lg transition-all ${active ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
-        title="Kiro Inspector (⌘+Shift+K)">
+        title="Kiro Inspector (⌘+Shift+I)">
         <MousePointer2 className="w-5 h-5" />
       </button>
 
