@@ -1,6 +1,8 @@
 # Kiro Inspector
 
 Select any UI element in your prototype, see its source file and line, describe a change, and copy a structured prompt for Kiro IDE.
+<img width="1057" height="595" alt="Screenshot 2026-05-01 at 2 33 07 PM" src="https://github.com/user-attachments/assets/b4a4c30c-eb84-4f0e-b219-73968afebf25" />
+
 
 ## Installation
 
