@@ -5,9 +5,16 @@
 # Kiro Inspector
 
 Select any UI element in your prototype, see its source file and line, describe a change, and copy a structured prompt for Kiro IDE.
+
+The tool will appear as a small bubble on the bottom right corner:
 <img width="1920" height="1200" alt="Screenshot 2026-05-08 at 11 18 52 AM" src="https://github.com/user-attachments/assets/3e516463-d4bf-4c3c-beaa-6e6aac2c11fe" />
 
+And once you select it, you can write your change request, copy prompt, and paste it into your Kiro CLI<img width="1920" height="1200" alt="Screenshot 2026-05-08 at 11 23 23 AM" src="https://github.com/user-attachments/assets/2c0219ec-37e4-4101-8656-b498564d93f4" />
+
 <img width="1911" height="1132" alt="Screenshot 2026-05-08 at 11 21 03 AM" src="https://github.com/user-attachments/assets/db5d9efa-e0a0-4cb0-b24a-d95965c9bdc9" />
+
+With that change, you can see it turned the background purple:
+![Uploading Screenshot 2026-05-08 at 11.23.23 AM.png…]()
 
 
 
