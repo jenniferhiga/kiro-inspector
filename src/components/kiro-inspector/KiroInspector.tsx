@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 interface ElementInfo {
   tagName: string
@@ -271,6 +272,7 @@ const styles = {
 export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
   if (import.meta.env.PROD) return null
 
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null)
   const [active, setActive] = useState(false)
   const [hoveredElement, setHoveredElement] = useState<ElementInfo | null>(null)
   const [selectedElement, setSelectedElement] = useState<ElementInfo | null>(null)
@@ -280,6 +282,15 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
   const [panelPos, setPanelPos] = useState<{ x: number; y: number } | null>(null)
   const [fabHover, setFabHover] = useState(false)
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
+
+  // Create portal container at the very end of body to ensure it's above all other portals
+  useEffect(() => {
+    const container = document.createElement('div')
+    container.id = 'kiro-inspector-portal'
+    document.body.appendChild(container)
+    setPortalContainer(container)
+    return () => { container.remove() }
+  }, [])
 
   const onDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -381,7 +392,9 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
 
   const editorLabel = editor === 'vscode' ? 'VS Code' : editor === 'webstorm' ? 'WebStorm' : editor.charAt(0).toUpperCase() + editor.slice(1)
 
-  return (
+  if (!portalContainer) return null
+
+  return createPortal(
     <>
       {/* FAB Button */}
       <button
@@ -504,6 +517,7 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
           </div>
         </div>
       )}
-    </>
+    </>,
+    portalContainer
   )
 }

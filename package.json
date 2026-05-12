@@ -1,6 +1,6 @@
 {
   "name": "kiro-inspector",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Select any UI element in your React prototype, see its source file and line, and copy a structured prompt for Kiro.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -18,12 +18,13 @@
     "babel-plugin-source-attr.cjs"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --external react",
+    "build": "tsup src/index.ts --format cjs,esm --dts --external react --external react-dom",
     "prepublishOnly": "npm run build",
     "demo": "vite --config demo/vite.config.ts"
   },
   "peerDependencies": {
-    "react": ">=18"
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.0",
