@@ -27,6 +27,15 @@ npm install kiro-inspector
 npm install kiro-inspector@latest
 ```
 
+Then restart your dev server:
+
+```bash
+# Stop the running server with Ctrl+C, then:
+npm run dev
+```
+
+No code changes required — the update is fully backwards compatible.
+
 ## Setup
 
 ### 1. Add the Babel plugin to your Vite config
