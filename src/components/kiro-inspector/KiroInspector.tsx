@@ -2,21 +2,17 @@
  * Kiro Inspector — select any UI element, see its source, describe a change, and copy a prompt for Kiro.
  *
  * Usage:
- *   import KiroInspector from './kiro-inspector/KiroInspector'
+ *   import { KiroInspector } from 'kiro-inspector'
  *   // Add at the root of your app (e.g. App.tsx):
  *   <KiroInspector />
  *
  * Requires:
- *   - lucide-react (peer dependency)
- *   - babel-plugin-source-attr.cjs in your project root + wired into vite.config.ts
- *   - process.env.EDITOR set in vite.config.ts (e.g. 'kiro', 'code', 'cursor')
- *   - Tailwind CSS (uses utility classes)
+ *   - babel-plugin-source-attr.cjs wired into vite.config.ts
  *
  * Keyboard shortcut: ⌘+Shift+I to toggle select mode
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, MousePointer2, Copy, Check, GripHorizontal } from 'lucide-react'
 
 interface ElementInfo {
   tagName: string
@@ -37,8 +33,242 @@ export interface KiroInspectorProps {
   editor?: EditorType
 }
 
+// Inline SVG icons to avoid lucide-react dependency
+const IconPointer = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/>
+  </svg>
+)
+const IconX = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 6L6 18"/><path d="M6 6l12 12"/>
+  </svg>
+)
+const IconCopy = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+  </svg>
+)
+const IconCheck = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6L9 17l-5-5"/>
+  </svg>
+)
+const IconGrip = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>
+  </svg>
+)
+
+const Z_TOP = 2147483647
+const Z_OVERLAY = 2147483646
+
+const styles = {
+  fab: {
+    position: 'fixed' as const,
+    bottom: 16,
+    right: 16,
+    zIndex: Z_TOP,
+    width: 48,
+    height: 48,
+    borderRadius: '50%',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+  },
+  fabInactive: {
+    background: '#fff',
+    color: '#374151',
+  },
+  fabActive: {
+    background: '#2563eb',
+    color: '#fff',
+  },
+  toast: {
+    position: 'fixed' as const,
+    top: 16,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: Z_TOP,
+    background: '#2563eb',
+    color: '#fff',
+    padding: '10px 20px',
+    borderRadius: 24,
+    fontSize: 14,
+    fontWeight: 500,
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+  },
+  highlight: {
+    position: 'fixed' as const,
+    pointerEvents: 'none' as const,
+    zIndex: Z_OVERLAY,
+    border: '2px solid #3b82f6',
+    background: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 4,
+  },
+  highlightLabel: {
+    position: 'absolute' as const,
+    top: -24,
+    left: 0,
+    background: '#2563eb',
+    color: '#fff',
+    fontSize: 11,
+    padding: '2px 8px',
+    borderRadius: 4,
+    whiteSpace: 'nowrap' as const,
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+  },
+  panel: {
+    position: 'fixed' as const,
+    zIndex: Z_TOP,
+    width: 380,
+    background: '#fff',
+    borderRadius: 12,
+    boxShadow: '0 8px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)',
+    border: '1px solid #e5e7eb',
+    overflow: 'hidden',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+  },
+  panelHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px 16px',
+    background: '#f9fafb',
+    borderBottom: '1px solid #e5e7eb',
+    cursor: 'move',
+    userSelect: 'none' as const,
+  },
+  panelTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#111827',
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: '#9ca3af',
+    padding: 4,
+    borderRadius: 4,
+    display: 'flex',
+  },
+  detailsToggle: {
+    padding: '8px 16px',
+    borderBottom: '1px solid #f3f4f6',
+  },
+  detailsBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    fontSize: 12,
+    color: '#6b7280',
+    padding: 0,
+  },
+  detailsContent: {
+    padding: '12px 16px',
+    fontSize: 12,
+    maxHeight: 180,
+    overflowY: 'auto' as const,
+  },
+  detailRow: {
+    display: 'flex',
+    gap: 8,
+    marginBottom: 6,
+  },
+  detailLabel: {
+    color: '#9ca3af',
+    width: 56,
+    flexShrink: 0,
+  },
+  detailCode: {
+    fontFamily: 'ui-monospace, monospace',
+    wordBreak: 'break-all' as const,
+  },
+  pre: {
+    background: '#f3f4f6',
+    padding: 8,
+    borderRadius: 6,
+    fontSize: 11,
+    overflow: 'auto',
+    maxHeight: 64,
+    margin: '8px 0 0',
+    fontFamily: 'ui-monospace, monospace',
+    color: '#6b7280',
+  },
+  inputSection: {
+    padding: '12px 16px',
+    borderTop: '1px solid #f3f4f6',
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: 500,
+    color: '#374151',
+    marginBottom: 8,
+  },
+  textarea: {
+    width: '100%',
+    padding: '10px 12px',
+    fontSize: 14,
+    border: '1px solid #d1d5db',
+    borderRadius: 8,
+    resize: 'none' as const,
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+  },
+  actions: {
+    padding: '12px 16px',
+    background: '#f9fafb',
+    borderTop: '1px solid #e5e7eb',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 8,
+  },
+  btnPrimary: {
+    width: '100%',
+    padding: '10px 16px',
+    background: '#2563eb',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  btnSecondary: {
+    width: '100%',
+    padding: '10px 16px',
+    background: '#e5e7eb',
+    color: '#374151',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+}
+
 export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
-  // Only render in development
   if (import.meta.env.PROD) return null
 
   const [active, setActive] = useState(false)
@@ -48,6 +278,7 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
   const [changeDescription, setChangeDescription] = useState('')
   const [showDetails, setShowDetails] = useState(false)
   const [panelPos, setPanelPos] = useState<{ x: number; y: number } | null>(null)
+  const [fabHover, setFabHover] = useState(false)
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
 
   const onDragStart = useCallback((e: React.MouseEvent) => {
@@ -125,14 +356,12 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
     if (!selectedElement?.sourceFile) return
     const line = selectedElement.sourceLine || 1
     const file = selectedElement.sourceFile
-    
     const editorUrls: Record<EditorType, string> = {
       kiro: `kiro://file/${file}:${line}:1`,
       vscode: `vscode://file/${file}:${line}:1`,
       cursor: `cursor://file/${file}:${line}:1`,
       webstorm: `webstorm://open?file=${file}&line=${line}`,
     }
-    
     window.open(editorUrls[editor], '_self')
   }
 
@@ -146,78 +375,132 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
     setCopied(true); setTimeout(() => setCopied(false), 2000)
   }
 
-  const panelStyle = panelPos
-    ? { position: 'fixed' as const, left: panelPos.x, top: panelPos.y, bottom: 'auto' as const, right: 'auto' as const }
-    : { position: 'fixed' as const, bottom: 80, right: 16 }
+  const panelPosition = panelPos
+    ? { left: panelPos.x, top: panelPos.y }
+    : { bottom: 80, right: 16 }
+
+  const editorLabel = editor === 'vscode' ? 'VS Code' : editor === 'webstorm' ? 'WebStorm' : editor.charAt(0).toUpperCase() + editor.slice(1)
 
   return (
     <>
-      <button data-kiro-select onClick={() => { setActive(!active); setSelectedElement(null) }}
-        className={`fixed bottom-4 right-4 z-[9999] p-3 rounded-full shadow-lg transition-all ${active ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
-        title="Kiro Inspector (⌘+Shift+I)">
-        <MousePointer2 className="w-5 h-5" />
+      {/* FAB Button */}
+      <button
+        data-kiro-select
+        onClick={() => { setActive(!active); setSelectedElement(null) }}
+        onMouseEnter={() => setFabHover(true)}
+        onMouseLeave={() => setFabHover(false)}
+        style={{
+          ...styles.fab,
+          ...(active ? styles.fabActive : styles.fabInactive),
+          transform: fabHover ? 'scale(1.1)' : 'scale(1)',
+          boxShadow: fabHover ? '0 6px 20px rgba(0,0,0,0.2)' : styles.fab.boxShadow,
+        }}
+        title="Kiro Inspector (⌘+Shift+I)"
+      >
+        <IconPointer />
       </button>
 
+      {/* Active mode toast */}
       {active && (
-        <div data-kiro-select className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+        <div data-kiro-select style={styles.toast}>
           Click any element to inspect • ESC to cancel
         </div>
       )}
 
+      {/* Hover highlight */}
       {active && hoveredElement && (
-        <div data-kiro-select className="fixed pointer-events-none z-[9998] border-2 border-blue-500 bg-blue-500/10"
-          style={{ top: hoveredElement.rect.top, left: hoveredElement.rect.left, width: hoveredElement.rect.width, height: hoveredElement.rect.height }}>
-          <div className="absolute -top-6 left-0 bg-blue-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+        <div
+          data-kiro-select
+          style={{
+            ...styles.highlight,
+            top: hoveredElement.rect.top,
+            left: hoveredElement.rect.left,
+            width: hoveredElement.rect.width,
+            height: hoveredElement.rect.height,
+          }}
+        >
+          <div style={styles.highlightLabel}>
             {hoveredElement.tagName}{hoveredElement.className ? `.${String(hoveredElement.className).split(' ')[0]}` : ''}
           </div>
         </div>
       )}
 
+      {/* Selected element highlight */}
       {selectedElement && (
-        <div data-kiro-select className="fixed pointer-events-none z-[9998] border-2 border-blue-600 bg-blue-500/10 rounded-sm"
-          style={{ top: selectedElement.rect.top, left: selectedElement.rect.left, width: selectedElement.rect.width, height: selectedElement.rect.height }} />
+        <div
+          data-kiro-select
+          style={{
+            ...styles.highlight,
+            border: '2px solid #2563eb',
+            top: selectedElement.rect.top,
+            left: selectedElement.rect.left,
+            width: selectedElement.rect.width,
+            height: selectedElement.rect.height,
+          }}
+        />
       )}
 
+      {/* Panel */}
       {selectedElement && (
-        <div data-kiro-select data-kiro-panel className="z-[9999] w-96 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden" style={panelStyle}>
-          <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b cursor-move select-none" onMouseDown={onDragStart}>
-            <div className="flex items-center gap-2">
-              <GripHorizontal className="w-4 h-4 text-gray-400" />
-              <span className="font-medium text-gray-900 text-sm">Kiro Inspector</span>
+        <div data-kiro-select data-kiro-panel style={{ ...styles.panel, ...panelPosition }}>
+          <div style={styles.panelHeader} onMouseDown={onDragStart}>
+            <div style={styles.panelTitle}>
+              <span style={{ color: '#9ca3af' }}><IconGrip /></span>
+              Kiro Inspector
             </div>
-            <button onClick={() => setSelectedElement(null)} className="text-gray-400 hover:text-gray-600" onMouseDown={e => e.stopPropagation()}>
-              <X className="w-4 h-4" />
+            <button style={styles.closeBtn} onClick={() => setSelectedElement(null)} onMouseDown={e => e.stopPropagation()}>
+              <IconX />
             </button>
           </div>
 
-          <div className="px-4 py-1.5 border-b border-gray-100">
-            <button onClick={() => setShowDetails(!showDetails)} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
+          <div style={styles.detailsToggle}>
+            <button style={styles.detailsBtn} onClick={() => setShowDetails(!showDetails)}>
               <span>{showDetails ? '▼' : '▶'}</span>
-              <span className="font-medium">Details</span>
+              <span style={{ fontWeight: 500 }}>Details</span>
             </button>
           </div>
+
           {showDetails && (
-            <div className="px-4 py-2 space-y-1.5 max-h-48 overflow-y-auto text-xs">
-              <div className="flex gap-2"><span className="text-gray-400 w-14 shrink-0">Element</span><code className="text-blue-600">&lt;{selectedElement.tagName}&gt;</code></div>
-              {selectedElement.className && <div className="flex gap-2"><span className="text-gray-400 w-14 shrink-0">Classes</span><code className="text-gray-700 break-all">{selectedElement.className.split(' ').slice(0, 4).join(' ')}</code></div>}
-              {selectedElement.sourceFile && <div className="flex gap-2"><span className="text-gray-400 w-14 shrink-0">Source</span><code className="text-green-600 break-all">{selectedElement.sourceFile}{selectedElement.sourceLine ? `:${selectedElement.sourceLine}` : ''}</code></div>}
-              <pre className="text-gray-500 bg-gray-100 p-2 rounded overflow-x-auto max-h-16 mt-1">{selectedElement.outerHTML.replace(/\s*data-source="[^"]*"/g, '').slice(0, 200)}...</pre>
+            <div style={styles.detailsContent}>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Element</span>
+                <code style={{ ...styles.detailCode, color: '#2563eb' }}>&lt;{selectedElement.tagName}&gt;</code>
+              </div>
+              {selectedElement.className && (
+                <div style={styles.detailRow}>
+                  <span style={styles.detailLabel}>Classes</span>
+                  <code style={styles.detailCode}>{selectedElement.className.split(' ').slice(0, 4).join(' ')}</code>
+                </div>
+              )}
+              {selectedElement.sourceFile && (
+                <div style={styles.detailRow}>
+                  <span style={styles.detailLabel}>Source</span>
+                  <code style={{ ...styles.detailCode, color: '#16a34a' }}>{selectedElement.sourceFile}{selectedElement.sourceLine ? `:${selectedElement.sourceLine}` : ''}</code>
+                </div>
+              )}
+              <pre style={styles.pre}>{selectedElement.outerHTML.replace(/\s*data-source="[^"]*"/g, '').slice(0, 200)}...</pre>
             </div>
           )}
 
-          <div className="px-4 py-2 border-t border-gray-100">
-            <div className="text-xs font-medium text-gray-600 mb-1.5">What to change</div>
-            <textarea value={changeDescription} onChange={e => setChangeDescription(e.target.value)}
-              placeholder="Describe your change, e.g. Make the background lighter, increase padding..."
-              className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm" rows={3} />
+          <div style={styles.inputSection}>
+            <div style={styles.inputLabel}>What to change</div>
+            <textarea
+              value={changeDescription}
+              onChange={e => setChangeDescription(e.target.value)}
+              placeholder="Describe your change, e.g. Make the background lighter..."
+              style={styles.textarea}
+              rows={3}
+            />
           </div>
 
-          <div className="px-4 py-3 border-t bg-gray-50 space-y-2">
-            <button onClick={copyToClipboard} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copied to clipboard!' : 'Copy prompt for Kiro'}
+          <div style={styles.actions}>
+            <button style={styles.btnPrimary} onClick={copyToClipboard}>
+              {copied ? <IconCheck /> : <IconCopy />}
+              {copied ? 'Copied!' : 'Copy prompt for Kiro'}
             </button>
-            <button onClick={openInEditor} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded hover:bg-gray-300">Open in {editor === 'vscode' ? 'VS Code' : editor === 'webstorm' ? 'WebStorm' : editor.charAt(0).toUpperCase() + editor.slice(1)}</button>
+            <button style={styles.btnSecondary} onClick={openInEditor}>
+              Open in {editorLabel}
+            </button>
           </div>
         </div>
       )}
