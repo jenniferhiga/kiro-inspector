@@ -21,6 +21,12 @@ With that change, you can see it turned the background purple:
 npm install kiro-inspector
 ```
 
+## Updating
+
+```bash
+npm install kiro-inspector@latest
+```
+
 ## Setup
 
 ### 1. Add the Babel plugin to your Vite config
@@ -71,12 +77,6 @@ function App() {
 - `react-dom` (>=18)
 
 **No other dependencies required!** The component uses inline styles and inline SVG icons, so it works with any CSS framework (or none at all).
-
-## Updating
-
-```bash
-npm install kiro-inspector@latest
-```
 
 ---
 
