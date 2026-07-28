@@ -93,7 +93,20 @@ function App() {
 
 - **Works above modals** — Uses a React portal with max z-index to render above any modal, dialog, or overlay (including Radix UI, Headless UI, etc.)
 - **Zero styling dependencies** — No Tailwind, no CSS files, no icon libraries. Just works.
-- **Keyboard shortcut** — Press `⌘+I` (Mac) or `Ctrl+I` (Windows/Linux) to toggle
+- **Keyboard shortcuts** — Press `Ctrl+I` to activate the inspector and bring back the bubble; press `Escape` to hide the panel and bubble
+
+  <details>
+  <summary>How keyboard shortcuts work</summary>
+
+  The inspector uses progressive dismissal — each press of `Escape` backs out one layer:
+
+  1. `Ctrl+I` → brings the bubble back onto screen
+  2. Click the bubble → activates the inspector (select mode)
+  3. `Escape` → closes the inspector panel (bubble stays)
+  4. `Escape` again → hides the bubble entirely
+
+  To start over at any point, press `Ctrl+I`.
+  </details>
 - **Draggable panel** — Drag the inspector panel anywhere on screen
 - **Production safe** — Automatically disabled in production builds
 
@@ -282,8 +295,9 @@ Yes — the prompt is generated in the `copyToClipboard` function. Fork the repo
 
 ### 1.1.2
 - Draggable bubble — drag the inspector button anywhere on screen
-- Hide/show bubble with `Escape` key (bring back with `⌘+I`)
-- Change keyboard shortcut from `⌘+Shift+I` to `⌘+I`
+- `Ctrl+I` to activate the inspector and bring back the bubble
+- `Escape` to hide the panel and bubble
+- Change keyboard shortcut from `⌘+Shift+I` to `Ctrl+I`
 
 ### 1.1.1
 - Use React portal to ensure inspector renders above all modals (Radix UI, Headless UI, etc.)
