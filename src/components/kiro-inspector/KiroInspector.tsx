@@ -273,6 +273,7 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
   if (import.meta.env.PROD) return null
 
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null)
+  const [hidden, setHidden] = useState(false)
   const [active, setActive] = useState(false)
   const [hoveredElement, setHoveredElement] = useState<ElementInfo | null>(null)
   const [selectedElement, setSelectedElement] = useState<ElementInfo | null>(null)
@@ -280,8 +281,10 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
   const [changeDescription, setChangeDescription] = useState('')
   const [showDetails, setShowDetails] = useState(false)
   const [panelPos, setPanelPos] = useState<{ x: number; y: number } | null>(null)
+  const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(null)
   const [fabHover, setFabHover] = useState(false)
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
+  const fabDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; didDrag: boolean } | null>(null)
 
   // Create portal container at the very end of body to ensure it's above all other portals
   useEffect(() => {
@@ -303,6 +306,34 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
       setPanelPos({ x: dragRef.current.origX + (ev.clientX - dragRef.current.startX), y: dragRef.current.origY + (ev.clientY - dragRef.current.startY) })
     }
     const onUp = () => { dragRef.current = null; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [])
+
+  const onFabDragStart = useCallback((e: React.MouseEvent) => {
+    const btn = (e.target as HTMLElement).closest('[data-kiro-fab]') as HTMLElement
+    if (!btn) return
+    const rect = btn.getBoundingClientRect()
+    fabDragRef.current = { startX: e.clientX, startY: e.clientY, origX: rect.left, origY: rect.top, didDrag: false }
+    const onMove = (ev: MouseEvent) => {
+      if (!fabDragRef.current) return
+      const dx = ev.clientX - fabDragRef.current.startX
+      const dy = ev.clientY - fabDragRef.current.startY
+      if (!fabDragRef.current.didDrag && Math.abs(dx) + Math.abs(dy) > 4) {
+        fabDragRef.current.didDrag = true
+      }
+      if (fabDragRef.current.didDrag) {
+        setFabPos({ x: fabDragRef.current.origX + dx, y: fabDragRef.current.origY + dy })
+      }
+    }
+    const onUp = () => {
+      if (fabDragRef.current && !fabDragRef.current.didDrag) {
+        setActive(a => !a); setSelectedElement(null)
+      }
+      fabDragRef.current = null
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
   }, [])
@@ -356,12 +387,20 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'I') { e.preventDefault(); setActive(a => !a); setSelectedElement(null) }
-      if (e.key === 'Escape') { setActive(false); setSelectedElement(null) }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'i') {
+        e.preventDefault()
+        if (hidden) { setHidden(false) }
+        else { setActive(a => !a); setSelectedElement(null) }
+      }
+      if (e.key === 'Escape') {
+        if (active) { setActive(false); setSelectedElement(null) }
+        else if (selectedElement) { setSelectedElement(null) }
+        else { setHidden(true) }
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [hidden, active, selectedElement])
 
   const openInEditor = () => {
     if (!selectedElement?.sourceFile) return
@@ -393,22 +432,25 @@ export default function KiroInspector({ editor = 'kiro' }: KiroInspectorProps) {
   const editorLabel = editor === 'vscode' ? 'VS Code' : editor === 'webstorm' ? 'WebStorm' : editor.charAt(0).toUpperCase() + editor.slice(1)
 
   if (!portalContainer) return null
+  if (hidden) return null
 
   return createPortal(
     <>
       {/* FAB Button */}
       <button
         data-kiro-select
-        onClick={() => { setActive(!active); setSelectedElement(null) }}
+        data-kiro-fab
+        onMouseDown={onFabDragStart}
         onMouseEnter={() => setFabHover(true)}
         onMouseLeave={() => setFabHover(false)}
         style={{
           ...styles.fab,
           ...(active ? styles.fabActive : styles.fabInactive),
+          ...(fabPos ? { left: fabPos.x, top: fabPos.y, bottom: 'auto', right: 'auto' } : {}),
           transform: fabHover ? 'scale(1.1)' : 'scale(1)',
           boxShadow: fabHover ? '0 6px 20px rgba(0,0,0,0.2)' : styles.fab.boxShadow,
         }}
-        title="Kiro Inspector (⌘+Shift+I)"
+        title="Kiro Inspector (⌘+I) — drag to reposition"
       >
         <IconPointer />
       </button>

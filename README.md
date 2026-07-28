@@ -93,7 +93,7 @@ function App() {
 
 - **Works above modals** — Uses a React portal with max z-index to render above any modal, dialog, or overlay (including Radix UI, Headless UI, etc.)
 - **Zero styling dependencies** — No Tailwind, no CSS files, no icon libraries. Just works.
-- **Keyboard shortcut** — Press `⌘+Shift+I` (Mac) or `Ctrl+Shift+I` (Windows/Linux) to toggle
+- **Keyboard shortcut** — Press `⌘+I` (Mac) or `Ctrl+I` (Windows/Linux) to toggle
 - **Draggable panel** — Drag the inspector panel anywhere on screen
 - **Production safe** — Automatically disabled in production builds
 
@@ -279,6 +279,11 @@ Yes — the prompt is generated in the `copyToClipboard` function. Fork the repo
 ---
 
 ## Changelog
+
+### 1.1.2
+- Draggable bubble — drag the inspector button anywhere on screen
+- Hide/show bubble with `Escape` key (bring back with `⌘+I`)
+- Change keyboard shortcut from `⌘+Shift+I` to `⌘+I`
 
 ### 1.1.1
 - Use React portal to ensure inspector renders above all modals (Radix UI, Headless UI, etc.)
